@@ -1,6 +1,23 @@
 <script setup>
-import { RouterLink, RouterView } from 'vue-router'
+import { ref } from 'vue'
 import HelloWorld from './components/HelloWorld.vue'
+import { apiService } from './services/api.service'
+import { RESOURCES } from './resources'
+const msg = ref('')
+const prompt = ref('')
+const context = ref([])
+
+async function onMakeQuestion() {
+  const response = apiService.postStream(RESOURCES.ollama.chat, {
+    context: context.value,
+    prompt: prompt.value
+  })
+  prompt.value = ''
+  for await (const chunk of response) {
+    msg.value += chunk.response
+    if (chunk.done) context.value = [...context.value, ...chunk.context]
+  }
+}
 </script>
 
 <template>
@@ -8,16 +25,10 @@ import HelloWorld from './components/HelloWorld.vue'
     <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
 
     <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
-      </nav>
+      <HelloWorld :msg="msg" />
+      <input v-model="prompt" @keydown.enter="onMakeQuestion" />
     </div>
   </header>
-
-  <RouterView />
 </template>
 
 <style scoped>
@@ -54,6 +65,10 @@ nav a {
 
 nav a:first-of-type {
   border: 0;
+}
+
+input {
+  width: 100% !important;
 }
 
 @media (min-width: 1024px) {
